@@ -1,12 +1,12 @@
 # Baka
 Sample anti-debug with detect ScyllaHide/HyperHide and TitanHide
 
-x64 support only!  
+x32\x64 support!  
 Peculiarities:  
--Api Wrapper  
--change vmp anti-debug  
+-Api Wrapper    
 -Code don't use CRT  
--Check Test mode
+-Check Test mode  
+-check CRC secthion  
   
 Running under HyperHide ->  
 ![alt text](https://github.com/LazyAhora/Baka/blob/main/HyperHide.png)  
