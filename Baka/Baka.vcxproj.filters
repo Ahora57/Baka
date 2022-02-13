@@ -16,7 +16,10 @@
     <Filter Include="ApiWrapper">
       <UniqueIdentifier>{2de04f8d-ce81-4e07-a29e-12af40170410}</UniqueIdentifier>
     </Filter>
-    <Filter Include="AntiDebug">
+    <Filter Include="AntiReverse">
+      <UniqueIdentifier>{4cfc82ce-5357-4386-a9bc-75669c64e721}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AntiReverse\AntiDebug">
       <UniqueIdentifier>{b5a748af-31a5-4780-9247-4ed57f4cd7da}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -26,37 +29,38 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="WindowsCode.h">
-      <Filter>ApiWrapper</Filter>
-    </ClInclude>
-    <ClInclude Include="UnhookApi.h">
-      <Filter>AntiDebug</Filter>
-    </ClInclude>
-    <ClInclude Include="TestModeCheck.h">
-      <Filter>AntiDebug</Filter>
-    </ClInclude>
     <ClInclude Include="Struct.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="NtApi.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="NOCrt.h">
+    <ClInclude Include="NoCRT.h">
       <Filter>ApiWrapper</Filter>
-    </ClInclude>
-    <ClInclude Include="CheckBigBool.h">
-      <Filter>AntiDebug</Filter>
     </ClInclude>
     <ClInclude Include="ApiWrapper.h">
       <Filter>ApiWrapper</Filter>
     </ClInclude>
     <ClInclude Include="AntiDebug.h">
-      <Filter>AntiDebug</Filter>
+      <Filter>AntiReverse\AntiDebug</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <MASM Include="SyscallAntiDebug.asm">
-      <Filter>AntiDebug</Filter>
-    </MASM>
+    <ClInclude Include="SyscallHelp.hpp">
+      <Filter>AntiReverse\AntiDebug</Filter>
+    </ClInclude>
+    <ClInclude Include="WoW64ext.h">
+      <Filter>ApiWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="TestModeCheck.h">
+      <Filter>AntiReverse</Filter>
+    </ClInclude>
+    <ClInclude Include="CRCSecthion.h">
+      <Filter>AntiReverse</Filter>
+    </ClInclude>
+    <ClInclude Include="CRCpp.h">
+      <Filter>ApiWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="CheckBigBool.h">
+      <Filter>AntiReverse\AntiDebug</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

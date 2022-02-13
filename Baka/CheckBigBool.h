@@ -1,79 +1,79 @@
 #pragma once
 
-#include "NtApi.h"
-#include <iostream>
-/*
-Just wallking in biigPool
+#include "NtApi.h" 
+#include "ApiWrapper.h"
 
-HyperHide:
-PoolTag: HyHd
-
-*/
 
 
 namespace BlackListPool
 {
 
-	bool IsHyperHideDebuggingProcess()
-	{
+	/*
+	Just wallking in BigPool
 
+	HyperHide:
+	PoolTag: HyHd
+
+	*/
+	__forceinline bool IsHyperHideDebuggingProcess()
+	{
 		/*
 		HyperHide don't clean big pool then he was unload ^_^ and under debugging NonPagedUsed = 384
 		*/
 
-		bool bDetect = false;
-	
-		NTSTATUS status;
-      
-		 
+		bool bDetect = FALSE;
+		DWORD Lenght = NULL;
+		PVOID bufferPoolInformathion = NULL;
+		NTSTATUS status = STATUS_UNSUCCESSFUL;
 
-		auto	bufferPoolInformathion = (PSYSTEM_POOLTAG_INFORMATION)VirtualAlloc(NULL, 1024 * 1024, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE); // Allocate memory for the module list
+		auto NtQuerySystemInformation = (t_NtQuerySystemInformation)ApiWrapper::GetProcAddress(L"ntdll.dll", "NtQuerySystemInformation");
+		if (!NtQuerySystemInformation)
+		{
+			return FALSE;
+		}
+		status = NtQuerySystemInformation(SystemPoolTagInformation, bufferPoolInformathion, Lenght, &Lenght);
 
-        if (!bufferPoolInformathion)
-        {
-            return 0;
-        }
-		status = NtQuerySystemInformation(SystemPoolTagInformation, bufferPoolInformathion, 1024 * 1024, NULL);
-        if (!NT_SUCCESS(status )) 
-        {
-          
-            VirtualFree(bufferPoolInformathion, 0, MEM_RELEASE);
-            return 0;
-        }
+		while (status == STATUS_INFO_LENGTH_MISMATCH) {
+			if (bufferPoolInformathion != NULL)
+				VirtualFree(bufferPoolInformathion, 0, MEM_RELEASE);
+
+			bufferPoolInformathion = VirtualAlloc(NULL, Lenght, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+			status = NtQuerySystemInformation(SystemPoolTagInformation, bufferPoolInformathion, Lenght, &Lenght);
+		}
+
+		if (!NT_SUCCESS(status)) {
+			if (bufferPoolInformathion != NULL)
+				VirtualFree(bufferPoolInformathion, 0, MEM_RELEASE);
+			return FALSE;
+		}
+
 
 		PSYSTEM_POOLTAG_INFORMATION sysPoolTagInfo = (PSYSTEM_POOLTAG_INFORMATION)bufferPoolInformathion;
 		PSYSTEM_POOLTAG sysPoolTag = (PSYSTEM_POOLTAG)&sysPoolTagInfo->TagInfo->Tag;
 		for (ULONG i = 0; i < sysPoolTagInfo->Count; i++)
 		{
-			
-			
-			
-			if (NoCrt::string::stricmp((char *)sysPoolTag->Tag, "Hyhd") ==0 )
+
+
+			if (NoCRT::string::stricmp((char*)sysPoolTag->Tag, "Hyhd") == 0)
 			{
 				if (sysPoolTag->PagedAllocs || sysPoolTag->NonPagedAllocs)
 				{
 					if (sysPoolTag->NonPagedUsed > 10 || sysPoolTag->PagedUsed > 10)//check for detect only for debugging 
 					{
 
-						bDetect = true;
+						bDetect = TRUE;
 					}
 				}
 			}
 
-			
+
 			sysPoolTag++;
 		}
 
-
-
-
-
-        VirtualFree(bufferPoolInformathion, 0, MEM_RELEASE);
-
+		VirtualFree(bufferPoolInformathion, 0, MEM_RELEASE);
 
 
 
 		return bDetect;
-
 	}
 }

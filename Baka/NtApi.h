@@ -2,25 +2,20 @@
 #include "NOCrt.h"
 
 
-#pragma comment(lib, "ntdll.lib")
 
-EXTERN_C  NTSTATUS ZwOpenSection(
+typedef   NTSTATUS(NTAPI* t_ZwOpenSection)
+(
 	PHANDLE            SectionHandle,
 	ACCESS_MASK        DesiredAccess,
 	POBJECT_ATTRIBUTES ObjectAttributes
-);
+	);
 
 
 
 
 
-
-
-
-
-
-
-EXTERN_C NTSTATUS ZwMapViewOfSection(
+typedef   NTSTATUS(NTAPI* t_ZwMapViewOfSection)
+(
 	HANDLE          SectionHandle,
 	HANDLE          ProcessHandle,
 	PVOID* BaseAddress,
@@ -31,37 +26,91 @@ EXTERN_C NTSTATUS ZwMapViewOfSection(
 	SECTION_INHERIT InheritDisposition,
 	ULONG           AllocationType,
 	ULONG           Win32Protect
-);
+	);
 
-EXTERN_C  NTSTATUS NtClose(
+typedef   NTSTATUS(NTAPI* t_NtClose)
+(
 	HANDLE Handle
-);
+	);
 
-EXTERN_C  NTSTATUS ZwUnmapViewOfSection(
+typedef   NTSTATUS(NTAPI* t_ZwUnmapViewOfSection)
+(
 	HANDLE ProcessHandle,
 	PVOID  BaseAddress
-);
+	);
 
 
 
+typedef NTSTATUS(NTAPI* t_NtQueryInformationProcess)
+(
 
 
 
-EXTERN_C NTSTATUS NtCreateSection(
-	PHANDLE            SectionHandle,
-	ACCESS_MASK        DesiredAccess,
-	POBJECT_ATTRIBUTES ObjectAttributes,
-	PLARGE_INTEGER     MaximumSize,
-	ULONG              SectionPageProtection,
-	ULONG              AllocationAttributes,
-	HANDLE             FileHandle
-);
+	IN HANDLE               ProcessHandle,
+	IN PROCESSINFOCLASS ProcessInformationClass,
+	OUT PVOID               ProcessInformation,
+	IN ULONG                ProcessInformationLength,
+	OUT PULONG              ReturnLength
+	);
 
-EXTERN_C NTSTATUS NtQuerySystemInformation(
+typedef NTSTATUS(NTAPI* t_NtSetInformationThread)(
+
+
+
+	IN HANDLE               ThreadHandle,
+	IN THREADINFOCLASS ThreadInformationClass,
+	IN PVOID                ThreadInformation,
+	IN ULONG                ThreadInformationLength);
+
+
+
+typedef NTSTATUS(NTAPI* t_NtQuerySystemInformation)
+(
 	SYSTEM_INFORMATION_CLASS SystemInformationClass,
 	PVOID                    SystemInformation,
 	ULONG                    SystemInformationLength,
 	PULONG                   ReturnLength
-);
+	);
 
+typedef NTSTATUS(NTAPI* t_NtQueryInformationThread)
+(
+
+
+
+	IN HANDLE               ThreadHandle,
+	IN THREADINFOCLASS ThreadInformationClass,
+	OUT PVOID               ThreadInformation,
+	IN ULONG                ThreadInformationLength,
+	OUT PULONG              ReturnLength OPTIONAL);
+
+
+
+
+typedef  NTSTATUS(NTAPI* t_NtReadVirtualMemory)
+(
+
+
+
+	IN HANDLE               ProcessHandle,
+	IN PVOID                BaseAddress,
+	OUT PVOID               Buffer,
+	IN ULONG                NumberOfBytesToRead,
+	OUT PULONG              NumberOfBytesReaded OPTIONAL);
+
+
+
+typedef  NTSTATUS(NTAPI* t_NtAllocateVirtualMemory)(
+
+
+
+	IN HANDLE               ProcessHandle,
+	IN OUT PVOID* BaseAddress,
+	IN ULONG                ZeroBits,
+	IN OUT PULONG           RegionSize,
+	IN ULONG                AllocationType,
+	IN ULONG                Protect); 
+typedef  NTSTATUS(NTAPI* t_RtlGetVersion)
+(
+	PRTL_OSVERSIONINFOW lpVersionInformation
+	);
 

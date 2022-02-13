@@ -1,39 +1,76 @@
 ﻿
 
-#include "CheckBigBool.h"
 #include "AntiDebug.h"
 #include "TestModeCheck.h"
+#include "CheckBigBool.h"
+#include "CRCSecthion.h"
 
-int main()
+
+int Entry()
 {
-	NoCrt::Console::printf(L"Test\n");
-
-
+	
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN); // for fun
+	
+	ApiWrapper::printf(L"execute module have bp ->\t%x\n", AntiDebug::Util::IsModuleHaveBP());
 
 	
 
-	ApiUnhook::UnhookApi(L"ntdll.dll", "NtClose"); //unhook NtClose
+	
+#ifndef _WIN64
+		ApiWrapper::printf(L"WoW64Translate is hooded ->\t%x\n", AntiDebug::Util::IsWow64Hooked());
+#endif 
 
 	
-	NoCrt::Console::printf(L"IsDebugObject ->\t %x\n",AntiDebug::VMPEx::IsDebugObject());
-
-
-	NoCrt::Console::printf(L"IsProcessDebugPort ->\t %x\n", AntiDebug::VMPEx::IsProcessDebugPort());
-
-
-	NoCrt::Console::printf(L"Check test mode by   NtQuerySystemInformation ->\t %x\n", CheckTestMode::CodeIntCheck());
 	
-	NoCrt::Console::printf(L"Check test mode by  registry ->\t %x\n", CheckTestMode::Registry());
+	ApiWrapper::printf(L"[ShellCode] Is debug port exist ->\t%x\n", AntiDebug::ShellCode::IsDebugPort());
+	ApiWrapper::printf(L"[ShellCode] Is debug flag exist ->\t%x\n",AntiDebug::ShellCode::IsDebugFlag());
+	ApiWrapper::printf(L"[ShellCode] Is debug object exist ->\t%x\n", AntiDebug::ShellCode::IsDebugObjectHandle());
+	ApiWrapper::printf(L"[ShellCode] Is thread don't hide? ->\t%x\n", AntiDebug::ShellCode::IsBadHideThread());
+	
+	ApiWrapper::printf(L"[OverWriteSyscall] Is debug port ->\t%x\n", AntiDebug::OverWriteSyscall::IsDebugPort());
+	ApiWrapper::printf(L"[OverWriteSyscall] Is thread don't hide  ->\t%x\n", AntiDebug::OverWriteSyscall::IsBadHideThread());
+	
+	
+	
+	
 
-	NoCrt::Console::printf(L"Is HyperHide use for debugging ->\t %x\n", BlackListPool::IsHyperHideDebuggingProcess());
+	ApiWrapper::printf(L"Is HyperHide help debugging some process ->\t%x\n", BlackListPool::IsHyperHideDebuggingProcess());
+	ApiWrapper::printf(L"Is build number hooked ->\t%x\n", AntiDebug::Util::BuildNumberIsHooked());
+
+	ApiWrapper::printf(L"Anti test mode by NtQuerySystemInformation ->\t%x\n", CheckTestMode::CodeIntCheck());
+	ApiWrapper::printf(L"Anti test mode by SystemStartOptions ->\t%x\n", CheckTestMode::Registry());
+	ApiWrapper::printf(L"Anti test mode by Elements in BCD00000000 ->\t%x\n", CheckTestMode::RegistryEx());
+	
+	auto baseAddress = (PVOID)ApiWrapper::GetModuleBaseAddress(NULL);
+	
+	auto isInitCRC = CRCSecthion::StealsCRCSecthionInit(baseAddress);
+	
 
 
-	NoCrt::Console::printf(L"BuildNumberIsHooked ->\t %x\n", AntiDebug::Util::BuildNumberIsHooked());
+	
+	
+	while (isInitCRC)
+	{
+		if (GetAsyncKeyState(VK_SPACE))
+		{
 
 
+			if (CRCSecthion::SecthionIsCorrupt(baseAddress))
+			{
+				ApiWrapper::printf(L"Detect change secthion!\n");
+			}
+			else
+			{
+				ApiWrapper::printf(L"No detect change secthion!\n");
+			}
+			Sleep(500);
+		}
+	}
+	
+	
+   
 
-	NoCrt::Console::printf(L"Syscall number NtQueryInformationProcess ->\t %x\n", ApiUnhook::GetSyscallNumber(L"ntdll.dll", "NtQueryInformationProcess"));
+	ApiWrapper::cin();
 
-	NoCrt::Console::cin();
-	NoCrt::Console::cin();
+	return 0;
 }

@@ -1,5 +1,6 @@
 #pragma once
-#include "WindowsCode.h"
+#include "NoCRT.h"
+
 
 namespace ApiWrapper
 {
@@ -9,7 +10,7 @@ namespace ApiWrapper
         UNICODE_STRING stringInit;
         if (string_to_init)
         {
-            stringInit.Length = NoCrt::string::wstrlen(string_to_init) * sizeof(wchar_t);
+            stringInit.Length = NoCRT::string::wstrlen(string_to_init) * sizeof(wchar_t);
             stringInit.MaximumLength = stringInit.Length + 2;
             stringInit.Buffer = (wchar_t*)string_to_init;
         }
@@ -27,40 +28,29 @@ namespace ApiWrapper
         //return 0 if equal
         if (case_int_sensitive)
         {
-            return NoCrt::string::wstrcmp(str_1.Buffer, str_2.Buffer);
+            return NoCRT::string::wstrcmp(str_1.Buffer, str_2.Buffer);
         }
         else
         {
-            return NoCrt::string::wstricmp(str_1.Buffer, str_2.Buffer);
+            return NoCRT::string::wstricmp(str_1.Buffer, str_2.Buffer);
         }
 
     }
 
 
 
-    __forceinline  void FreeUnicodeString(UNICODE_STRING& str)
+    __forceinline  void FreeUnicodeString(PUNICODE_STRING str)
     {
-        //just set buffer/Length
 
-        /*
-        in disassembly  RtlFreeUnicodeString use ExFreePoolWithTag wrf?
-        */
-        str.Buffer = 0;
-        str.Length = 0;
-        str.MaximumLength = 0;
+        str->Buffer = 0;
+        str->Length = 0;
+        str->MaximumLength = 0;
     }
 
-    __forceinline void NTAPI MyMoveMemory(
-        PVOID Destination,
-        CONST VOID* Source,
-        SIZE_T Length
-    )
-    {
-        NoCrt::mem::memmove(Destination, Source, Length);
-    }
+    
 
 
-    SIZE_T  NTAPI   RtlCompareMemory
+    __forceinline  SIZE_T  NTAPI   RtlCompareMemory
     (const VOID* Source1,
         const VOID* Source2,
         SIZE_T Length)
@@ -72,11 +62,12 @@ namespace ApiWrapper
         return i;
     }
 
-    SIZE_T
-        NTAPI
-        RtlCompareMemoryUlong(IN PVOID Source,
+    __forceinline  SIZE_T NTAPI  RtlCompareMemoryUlong
+    (
+            IN PVOID Source,
             IN SIZE_T Length,
-            IN ULONG Value)
+            IN ULONG Value
+     )
     {
         PULONG ptr = (PULONG)Source;
         ULONG_PTR len = Length / sizeof(ULONG);
@@ -101,7 +92,7 @@ namespace ApiWrapper
         PVOID Destination,
         SIZE_T Length)
     {
-        NoCrt::mem::memset(Destination, Length, 0);
+        NoCRT::mem::memset(Destination, 0, Length);
     }
 
     __forceinline  VOID NTAPI FillMemoryUlonglong
@@ -122,10 +113,10 @@ namespace ApiWrapper
     }
 
 
-    DWORD64 GetModuleBaseAddress(const wchar_t* modName)
+    __forceinline DWORD64 GetModuleBaseAddress(const wchar_t* modName)
     {
 
-        //   VM_DOLPHIN_BLACK_START
+
         LDR_DATA_TABLE_ENTRY* modEntry = nullptr;
 
 
@@ -151,22 +142,56 @@ namespace ApiWrapper
 
             if (mod->BaseDllName.Buffer)
             {
-                if (NoCrt::string::wstrstr(modName, mod->BaseDllName.Buffer))
+                if (!modName)
                 {
-                    //_wcsicmp
                     modEntry = mod;
                     break;
                 }
+
+
+                if (NoCRT::string::wstrstr(modName, mod->BaseDllName.Buffer))
+                {
+                    modEntry = mod;
+                    break;
+                }
+
+
             }
         }
-        //VM_DOLPHIN_BLACK_END
         return (DWORD64)modEntry->DllBase;
 
     }
 
+    __forceinline DWORD64 GetProcAddress(const wchar_t* modName, const char* ApiName)
+    {
+        auto base = GetModuleBaseAddress(modName);
+        if (!base)
+            return 0;
+        auto pDOS = (PIMAGE_DOS_HEADER)base;
+        if (pDOS->e_magic != IMAGE_DOS_SIGNATURE)
+            return 0;
+        auto pNT = (PIMAGE_NT_HEADERS)(base + (DWORD)pDOS->e_lfanew);
+        if (pNT->Signature != IMAGE_NT_SIGNATURE)
+            return 0;
+        auto pExport = (PIMAGE_EXPORT_DIRECTORY)(base + pNT->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+        if (!pExport)
+            return 0;
+        auto names = (PDWORD)(base + pExport->AddressOfNames);
+        auto ordinals = (PWORD)(base + pExport->AddressOfNameOrdinals);
+        auto functions = (PDWORD)(base + pExport->AddressOfFunctions);
+
+        for (int i = 0; i < pExport->NumberOfFunctions; ++i) {
+            auto name = (LPCSTR)(base + names[i]);
+            if (!NoCRT::string::strcmp(name, ApiName))
+                return base + functions[ordinals[i]];
+        }
+        return 0;
+    }
 
 
-    DWORD64 GetProcAddress(DWORD64 base, const char* apiNAME)
+
+
+    __forceinline DWORD64 GetProcAddress(DWORD64 base, const char* ApiName)
     {
 
         if (!base)
@@ -186,9 +211,10 @@ namespace ApiWrapper
 
         for (int i = 0; i < pExport->NumberOfFunctions; ++i) {
             auto name = (LPCSTR)(base + names[i]);
-            if (!NoCrt::string::strcmp(name, apiNAME))
+            if (!NoCRT::string::strcmp(name, ApiName))
                 return base + functions[ordinals[i]];
         }
+        return 0;
     }
 
     // Get Windows number by    KUSER_SHARED_DATA(support on Windows XP or leater)
@@ -199,15 +225,15 @@ namespace ApiWrapper
         if (NtMajorVersion == 10)
         {
             auto NtBuildNumber = *(int*)0x7FFE0260;//NtBuildNumber
-            if (NtBuildNumber > 22000)
+            if (NtBuildNumber >= 22000)
             {
-                return WINDOWS_11;
+                return WINDOWS_NUMBER_11;
             }
-            return WINDOWS_10;
+            return WINDOWS_NUMBER_10;
         }
         else if (NtMajorVersion == 5)
         {
-            return WINDOWS_XP;//Windows XP
+            return WINDOWS_NUMBER_XP;//Windows XP
         }
         else if (NtMajorVersion == 6)
         {
@@ -217,13 +243,13 @@ namespace ApiWrapper
             switch (*(BYTE*)0x7FFE0270)  //0x7FFE0270 NtMinorVersion
             {
             case 1:
-                return WINDOWS_7;//windows 7
+                return WINDOWS_NUMBER_7;//windows 7
             case 2:
-                return WINDOWS_8; //window 8
+                return WINDOWS_NUMBER_8; //window 8
             case 3:
-                return WINDOWS_8_1; //windows 8.1
+                return WINDOWS_NUMBER_8_1; //windows 8.1
             default:
-                return 0;
+                return WINDOWS_NUMBER_11;//windows 11
             }
 
         }
@@ -231,22 +257,21 @@ namespace ApiWrapper
         return 0;
     }
 
-
-    //Get windows numbe build by NtBuildNumber in KUSER_SHARED_DATA(support in Windows 10 or leater)
+    // Get windows numbe build by NtBuildNumber in KUSER_SHARED_DATA(support in Windows 10 or leater)
     __forceinline   int GetNumberBuild()
     {
-        if (GetWindowsNumber() >= WINDOWS_10)
+        if (GetWindowsNumber() >= WINDOWS_NUMBER_10)
         {
             return *(int*)0x00000007FFE0260; //NtBuildNumber
 
         }
-#ifdef _WIN64
-        return *(int*)(__readgsqword(0x60) + 0x120);
 
-#else
-        return *(int*)(__readfsdword(0x30) + 0xAC);
-#endif 
+        return 0;
+
+
     }
+
+
 
     //Get OSBuildNumber in PEB
     __forceinline  int PEBGetNumberBuild()
@@ -263,64 +288,39 @@ namespace ApiWrapper
 
     }
 
-
-
-
-
-
-
-
-    __forceinline PRUNTIME_FUNCTION
-        NTAPI
-        RtlLookupFunctionEntry(
-            IN DWORD64 ControlPc,
-            OUT PDWORD64 ImageBase,
-            OUT PUNWIND_HISTORY_TABLE HistoryTable)
+    void printf(const wchar_t* formatstring, ...)
     {
-        PRUNTIME_FUNCTION FunctionTable, FunctionEntry;
-        ULONG TableLength;
-        ULONG IndexLo, IndexHi, IndexMid;
 
-        /* Find the corresponding table */
-        FunctionTable = WindowsCode::RtlLookupFunctionTable(ControlPc, ImageBase, &TableLength);
 
-        /* Fail, if no table is found */
-        if (!FunctionTable)
-        {
-            return NULL;
-        }
+        DWORD dwRet;
+        wchar_t buffer[150];
+        NoCRT::mem::memset(buffer, sizeof(wchar_t) * 150, 0);
+        va_list v1;
+        __crt_va_start(v1, formatstring);
+        wvsprintfW(buffer, formatstring, v1);
+        auto bufferLength = NoCRT::string::wstrlen(buffer);
+        WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), buffer, bufferLength, &dwRet, 0);
 
-        /* Use relative virtual address */
-        ControlPc -= *ImageBase;
 
-        /* Do a binary search */
-        IndexLo = 0;
-        IndexHi = TableLength;
-        while (IndexHi > IndexLo)
-        {
-            IndexMid = (IndexLo + IndexHi) / 2;
-            FunctionEntry = &FunctionTable[IndexMid];
 
-            if (ControlPc < FunctionEntry->BeginAddress)
-            {
-                /* Continue search in lower half */
-                IndexHi = IndexMid;
-            }
-            else if (ControlPc >= FunctionEntry->EndAddress)
-            {
-                /* Continue search in upper half */
-                IndexLo = IndexMid + 1;
-            }
-            else
-            {
-                /* ControlPc is within limits, return entry */
-                return FunctionEntry;
-            }
-        }
-
-        /* Nothing found, return NULL */
-        return NULL;
     }
+
+   
+    wchar_t* cin()
+    {
+
+        wchar_t input;
+
+        do {
+            DWORD charsRead;
+            ReadConsoleW(GetStdHandle(STD_INPUT_HANDLE), &input, 1, &charsRead, nullptr);
+        } while (!input);
+
+        return (wchar_t*)input;
+    }
+    
+
+
 
 
 }
