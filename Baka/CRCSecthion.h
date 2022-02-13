@@ -3,7 +3,6 @@
 #include "NtApi.h"
 #include "CRCpp.h"
 
-#define CRC32C(c,d) (c=(c>>8)^crc_c[(c^(d))&0xFF])
 
 namespace CRCSecthion
 {
