@@ -53,7 +53,7 @@
     <ClInclude Include="TestModeCheck.h">
       <Filter>AntiReverse</Filter>
     </ClInclude>
-    <ClInclude Include="CRCSecthion.h">
+    <ClInclude Include="CRCSections.h">
       <Filter>AntiReverse</Filter>
     </ClInclude>
     <ClInclude Include="CRCpp.h">

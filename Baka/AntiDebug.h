@@ -364,9 +364,9 @@ namespace AntiDebug
 
 	namespace OverWriteSyscall
 	{
-		 bool IsDebugPort()
+		 bool IsDebugFlagHooked()
 		{
-			DWORD64  DebugPort = NULL;
+			DWORD32  DebugFlag = NULL;
 			NTSTATUS status = STATUS_UNSUCCESSFUL;
 			DWORD protect = NULL;
 			BYTE safeByte[20];
@@ -377,66 +377,156 @@ namespace AntiDebug
 				0xC3                        // retn
 			};
 			NoCRT::mem::memset(safeByte, 0, sizeof(safeByte));
-			auto SyscallNumber = SyscallStub::GetSyscallNumber(L"ntdll.dll", "NtQueryInformationProcess");// Get auto syscall number
+			auto syscallNumberQueryInformationProcess = SyscallStub::GetSyscallNumber(L"ntdll.dll", "NtQueryInformationProcess");// Get auto syscall number
+			auto syscallSetInformationProcess = SyscallStub::GetSyscallNumber(L"ntdll.dll", "NtSetInformationProcess");// Get auto syscall number
 
 			/// can't find automatic sycall number ,so we get manual by Windows number
-			if (!SyscallNumber)
+			if (!syscallNumberQueryInformationProcess || !syscallSetInformationProcess)
 			{
 
 				auto numberWindows = ApiWrapper::GetWindowsNumber();
 				if (numberWindows > WINDOWS_NUMBER_8_1)
 				{
-					SyscallNumber = 25;
+					syscallNumberQueryInformationProcess = 25;
+					syscallSetInformationProcess = 28;
 
 				}
 				else if (numberWindows == WINDOWS_NUMBER_8_1)
 				{
-					SyscallNumber = 24;
+					syscallNumberQueryInformationProcess = 24;
+					syscallSetInformationProcess = 27;
 				}
 				else if (numberWindows == WINDOWS_NUMBER_8)
 				{
-					SyscallNumber = 23;
+					syscallNumberQueryInformationProcess = 23;
+					syscallSetInformationProcess = 26;
 				}
 				else if (numberWindows < WINDOWS_NUMBER_8)
 				{
-					SyscallNumber = 22;
+					syscallNumberQueryInformationProcess = 22;
+					syscallSetInformationProcess = 25;
 				}
 			}
-			auto addressApi = (t_NtQueryInformationProcess)ApiWrapper::GetProcAddress(L"ntdll.dll", "NtAddBootEntry");  //NtAddBootEntry
+			auto addressApi =  (DWORD64*)ApiWrapper::GetProcAddress(L"ntdll.dll", "NtAddBootEntry");  //NtAddBootEntry
 			if (!addressApi)
 			{
 				return FALSE;
 			}
 			//We write shellcode in ntdll Api for present allocate memory
 			VirtualProtect(addressApi, 0x1024, PAGE_EXECUTE_READWRITE, &protect);
-			NoCRT::mem::memcpy(&shellSysCall64[1], &SyscallNumber, 2); //set syscall
+			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallNumberQueryInformationProcess, 2); //set syscall
 			NoCRT::mem::memcpy(safeByte, addressApi, sizeof(safeByte));
 			NoCRT::mem::memcpy((void*)addressApi, shellSysCall64, sizeof(shellSysCall64));// write shellcode
 
 #ifdef _WIN64
 
-			status = addressApi(NtCurrentProcess, ProcessDebugPort, &DebugPort, sizeof(DebugPort), 0);
+			status = (t_NtQueryInformationProcess(addressApi))(NtCurrentProcess, ProcessDebugFlags, &DebugFlag, sizeof(DebugFlag), 0);
 #else
 
 			status = WoW64Help::X64Call(
 				(DWORD64)addressApi,
 				5,
 				(DWORD64)-1,	//NtCurrentProcess
-				(DWORD64)ProcessDebugPort,
-				(DWORD64)&DebugPort,
-				(DWORD64)sizeof(DebugPort),
+				(DWORD64)ProcessDebugFlags,
+				(DWORD64)&DebugFlag,
+				(DWORD64)sizeof(DebugFlag),
+				(DWORD64)0);
+
+
+#endif // 
+
+			if (NT_SUCCESS(status) && DebugFlag == 0)
+			{
+				return TRUE;
+			}
+			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallSetInformationProcess, 2); //set syscall
+			NoCRT::mem::memcpy((void*)addressApi, shellSysCall64, sizeof(shellSysCall64));// write shellcode
+			DebugFlag = 0;
+
+			/*
+			We set DebugFlag and check this +
+			TitanHide don't hook NtSetInformationProcess and return all time in NtQueryInformationProcess NoDebugInherit = TRUE,
+			so we can detect this
+			*/
+#ifdef _WIN64
+
+			status = (t_NtSetInformationProcess(addressApi))(NtCurrentProcess, ProcessDebugFlags, &DebugFlag, sizeof(DebugFlag));
+#else
+
+			status = WoW64Help::X64Call(
+				(DWORD64)addressApi,
+				5,
+				(DWORD64)-1,	//NtCurrentProcess
+				(DWORD64)ProcessDebugFlags,
+				(DWORD64)&DebugFlag,
+				(DWORD64)sizeof(DebugFlag),
+				(DWORD64)0);
+
+
+#endif // 
+			if (!NT_SUCCESS(status))
+			{
+				NoCRT::mem::memcpy(addressApi, safeByte, sizeof(safeByte));
+				VirtualProtect(addressApi, 0x1024, protect, &protect);
+				return FALSE;
+			}
+
+			DebugFlag = 1;
+			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallNumberQueryInformationProcess, 2); //set syscall
+			NoCRT::mem::memcpy((void*)addressApi, shellSysCall64, sizeof(shellSysCall64));// write shellcode
+			// Goodbuy TitanHide
+#ifdef _WIN64
+
+			status = (t_NtQueryInformationProcess(addressApi))(NtCurrentProcess, ProcessDebugFlags, &DebugFlag, sizeof(DebugFlag), 0);
+#else
+
+			status = WoW64Help::X64Call(
+				(DWORD64)addressApi,
+				5,
+				(DWORD64)-1,	//NtCurrentProcess
+				(DWORD64)ProcessDebugFlags,
+				(DWORD64)&DebugFlag,
+				(DWORD64)sizeof(DebugFlag),
+				(DWORD64)0);
+
+
+#endif // 
+			if (NT_SUCCESS(status) && DebugFlag != 0)
+			{
+				return TRUE;
+			}
+
+			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallSetInformationProcess, 2); //set syscall
+			NoCRT::mem::memcpy((void*)addressApi, shellSysCall64, sizeof(shellSysCall64));// write shellcode
+			DebugFlag = 1;
+#ifdef _WIN64
+
+			status = (t_NtSetInformationProcess(addressApi))(NtCurrentProcess, ProcessDebugFlags, &DebugFlag, sizeof(DebugFlag));
+#else
+
+			status = WoW64Help::X64Call(
+				(DWORD64)addressApi,
+				5,
+				(DWORD64)-1,	//NtCurrentProcess
+				(DWORD64)ProcessDebugFlags,
+				(DWORD64)&DebugFlag,
+				(DWORD64)sizeof(DebugFlag),
 				(DWORD64)0);
 
 
 #endif // 
 			NoCRT::mem::memcpy(addressApi ,safeByte, sizeof(safeByte));
 			VirtualProtect(addressApi, 0x1024, protect, &protect);
-			if (NT_SUCCESS(status) && DebugPort != 0)
-			{
-				return TRUE;
-			}
+			
 			return FALSE;
+
+
+
 		}
+
+
+
+
 
 		bool IsBadHideThread()
 		{
@@ -613,13 +703,25 @@ namespace AntiDebug
 		*/
 		__forceinline bool BuildNumberIsHooked()
 		{
+			 
+			auto buildNumberNtdll = ApiWrapper::GetNtdllBuild();
 
-			bool bDeect = FALSE;
-
+			//Check start check OSBuildNumber in PEB 
 			if (ApiWrapper::GetWindowsNumber() >= WINDOWS_NUMBER_10)
 			{
 				// we can safe check by read  NtBuildNumber in KUSER_SHARED_DATA
-				bDeect = ApiWrapper::GetNumberBuild() != ApiWrapper::PEBGetNumberBuild();
+				if (ApiWrapper::GetNumberBuild() != ApiWrapper::PEBGetNumberBuild())
+				{
+					return TRUE;
+				}
+				else if 
+				(
+					ApiWrapper::GetNumberBuild() - buildNumberNtdll > 2000 ||
+					buildNumberNtdll - ApiWrapper::GetNumberBuild() < 2000
+				)
+				{
+					return TRUE;
+				}
 
 			}
 			else
@@ -637,14 +739,20 @@ namespace AntiDebug
 					RtlGetVersion(&lpVersionInformation);
 					if (lpVersionInformation.dwBuildNumber != ApiWrapper::PEBGetNumberBuild())
 					{
-						bDeect = TRUE;
+						  return TRUE;
+					}
+					else if
+						((lpVersionInformation.dwBuildNumber - buildNumberNtdll > 2000) ||
+							(buildNumberNtdll - lpVersionInformation.dwBuildNumber < 2000))
+					{
+						return TRUE;
 					}
 
 				}
 			}
 
 
-			return bDeect;
+			return FALSE;
 		}
 
 

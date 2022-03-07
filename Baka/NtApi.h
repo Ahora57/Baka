@@ -114,3 +114,14 @@ typedef  NTSTATUS(NTAPI* t_RtlGetVersion)
 	PRTL_OSVERSIONINFOW lpVersionInformation
 	);
 
+
+typedef  NTSTATUS(NTAPI* t_NtSetInformationProcess)
+(
+
+
+
+	IN HANDLE               ProcessHandle,
+	IN PROCESSINFOCLASS ProcessInformationClass,
+	IN PVOID                ProcessInformation,
+	IN ULONG                ProcessInformationLength);
+

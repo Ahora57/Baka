@@ -452,12 +452,13 @@ typedef struct _SYSTEM_POOLTAG_INFORMATION
     SYSTEM_POOLTAG TagInfo[ANYSIZE_ARRAY];
 }SYSTEM_POOLTAG_INFORMATION, * PSYSTEM_POOLTAG_INFORMATION;
 
-typedef struct _SECTHION_CRC
+typedef struct _SECTION_CRC
 {
     PVOID         virtualAddress;
     DWORD         virtualSize;
     DWORD         resultCRC;
-}SECTHION_CRC;
+    DWORD         fletcherCRC;
+}SECTION_CRC;
 
 typedef struct _UNICODE_STRING
 {

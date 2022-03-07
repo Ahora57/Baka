@@ -491,7 +491,7 @@ namespace NoCRT
             __int64 acc = 0;
             int neg = 0;
             if (nptr == 0) return 0;
-            while (*s = L' ') s++;
+           // while (*s = L' ') s++;
             if (*s == L'-')
             {
                 neg = 1;
@@ -512,7 +512,7 @@ namespace NoCRT
             int acc = 0;
             int neg = 0;
             if (nptr == 0) return 0;
-            while (*s = L' ') s++;
+           // while (*s = L' ') s++;
             if (*s == L'-')
             {
                 neg = 1;

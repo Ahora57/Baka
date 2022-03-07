@@ -166,7 +166,7 @@
     <ClInclude Include="ApiWrapper.h" />
     <ClInclude Include="CheckBigBool.h" />
     <ClInclude Include="CRCpp.h" />
-    <ClInclude Include="CRCSecthion.h" />
+    <ClInclude Include="CRCSections.h" />
     <ClInclude Include="NoCRT.h" />
     <ClInclude Include="NtApi.h" />
     <ClInclude Include="Struct.h" />

@@ -271,7 +271,19 @@ namespace ApiWrapper
 
     }
 
-
+    __forceinline DWORD64 GetNtdllBuild()
+    {
+        auto  pNative = (wchar_t*)ApiWrapper::GetModuleBaseAddress(L"ntdll.dll");
+   
+        for (; ; pNative++)
+         {
+           if (NoCRT::string::wstrcmp(pNative, L"FileVersion")==0)
+           {
+              
+              return NoCRT::string::wtoi64(pNative + 18);
+            }
+         }
+    }
 
     //Get OSBuildNumber in PEB
     __forceinline  int PEBGetNumberBuild()

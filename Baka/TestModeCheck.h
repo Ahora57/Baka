@@ -32,7 +32,7 @@ namespace CheckTestMode
 
 
 
-	 bool Registry()
+	 bool IsStartedWithDisableDSE()
 	{
 
 		/*
@@ -40,7 +40,7 @@ namespace CheckTestMode
 
 		*/
 
-		bool bRet = false;
+		bool bDetect = FALSE;
 		char RegKey[_MAX_PATH];
 		DWORD BufSize = _MAX_PATH;
 		DWORD dataType = REG_SZ;
@@ -55,20 +55,20 @@ namespace CheckTestMode
 			if (valSystemOpthion == ERROR_SUCCESS)
 			{
 				if (NoCRT::string::strstr(RegKey, "TESTSIGNING"))
-					bRet = true;
+					bDetect = true;
 			}
 			RegCloseKey(hKey);
 		}
 
 
-		return bRet;
+		return bDetect;
 	}
 
 
 	/*
 	 originale idea  https://github.com/mq1n/NoMercy/blob/3a375e27f56fe9eec9c553c641ce0abde2c6b22b/Source/Client/NM_Engine/ITestSignatureScanner.cpp#L106
 	*/
-	__forceinline bool RegistryEx()
+	__forceinline bool IsBcdLibraryBooleanAllowPrereleaseSignatures()
 	{
 		HKEY hTestKey;
 		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "BCD00000000\\Objects", 0, KEY_READ, &hTestKey) != ERROR_SUCCESS)
@@ -87,7 +87,7 @@ namespace CheckTestMode
 		DWORD    cbSecurityDescriptor;
 		FILETIME ftLastWriteTime;
 
-		bool bDetect = false;
+		bool bDetect = FALSE;
 
 		auto dwReturn = (PDWORD)VirtualAlloc(0, 0x4096, MEM_COMMIT, PAGE_READWRITE);
 		DWORD dwBufSize = 0x4096;
