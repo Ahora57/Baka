@@ -6,7 +6,7 @@ Peculiarities:
 -Api Wrapper    
 -Code don't use CRT  
 -Check Test mode  
--check CRC secthion  
+-check CRC sections  
   
 Running under HyperHide ->  
 ![alt text](https://github.com/LazyAhora/Baka/blob/main/HyperHide.png)  
