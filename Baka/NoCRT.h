@@ -9,6 +9,11 @@ namespace NoCRT
     namespace mem
     {
 
+        __forceinline  int toupper(int c)
+        {
+            if (c >= 'a' && c <= 'z') return c - 'a' + 'A';
+            return c;
+        }
 
         __forceinline  void* memcpy(void* dest, const void* src, unsigned __int64 count)
         {

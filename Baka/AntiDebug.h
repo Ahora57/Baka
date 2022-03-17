@@ -77,6 +77,11 @@ namespace AntiDebug
 
 #endif // 
 
+			//compare byte's
+			if (NoCRT::mem::memicmp((void*)addressShellCode, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
 
 			VirtualFree((PVOID)addressShellCode, 0, MEM_RELEASE);
 			if (NT_SUCCESS(status) && DebugPort != 0)
@@ -151,6 +156,11 @@ namespace AntiDebug
 
 #endif // 
 
+			//compare byte's
+			if (NoCRT::mem::memicmp((void*)addressShellCode, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
 
 			VirtualFree((PVOID)addressShellCode, 0, MEM_RELEASE);
 			if (NT_SUCCESS(status) && DebugObject != 0)
@@ -227,6 +237,11 @@ namespace AntiDebug
 
 #endif // 
 
+			//compare byte's
+			if (NoCRT::mem::memicmp((void*)addressShellCode, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
 
 			VirtualFree((PVOID)addressShellCode, 0, MEM_RELEASE);
 			if (status == STATUS_SUCCESS && DebugFlag == 0)
@@ -236,135 +251,14 @@ namespace AntiDebug
 			return FALSE;
 		}
 
-		__forceinline	bool IsBadHideThread()
-		{
-
-			NTSTATUS  status = STATUS_UNSUCCESSFUL;
-			bool IsThreadHide = FALSE;
-			DWORD64 badGuy = NULL;
-
-			unsigned char shellSysCall64[] = {
-				0xB8, 0x0, 0x0, 0x0, 0x0,   // mov eax,syscallNumber
-				0x4C, 0x8B, 0xD1,           // mov r10,rcx
-				0x0F, 0x05,                 // syscall
-				0xC3                        // retn
-			};
-
-			auto syscallNumberSetInformathion = SyscallStub::GetSyscallNumber(L"ntdll.dll", "NtSetInformationThread");// Get auto syscall number
-
-			auto syscallNumberQueryInfThread = SyscallStub::GetSyscallNumber(L"ntdll.dll", "NtQueryInformationThread");// Get auto syscall number
-
-			if (!syscallNumberSetInformathion || !syscallNumberQueryInfThread)
-			{
-				/// can't find automatic sycall number ,so we get manual by Windows number
-				auto numberWindows = ApiWrapper::GetWindowsNumber();
-				if (numberWindows > WINDOWS_NUMBER_8_1)
-				{
-					syscallNumberSetInformathion = 13;
-					syscallNumberQueryInfThread = 37;
-				}
-				else if (numberWindows == WINDOWS_NUMBER_8_1)
-				{
-					syscallNumberSetInformathion = 12;
-					syscallNumberQueryInfThread = 36;
-				}
-				else if (numberWindows == WINDOWS_NUMBER_8)
-				{
-					syscallNumberSetInformathion = 11;
-					syscallNumberQueryInfThread = 35;
-				}
-				else if (numberWindows < WINDOWS_NUMBER_8)
-				{
-					syscallNumberSetInformathion = 10;
-					syscallNumberQueryInfThread = 34;
-				}
-			}
-
-			auto addressShellCode = VirtualAlloc(0, 0x1024, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-			if (!addressShellCode)
-			{
-				return FALSE;
-			}
-
-			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallNumberSetInformathion, 2); //set syscall
-			NoCRT::mem::memcpy((void*)addressShellCode, shellSysCall64, sizeof(shellSysCall64));// write shellcode
-#ifdef _WIN64
-
-			status = ((t_NtSetInformationThread)addressShellCode)(NtCurrentThread, ThreadHideFromDebugger, &badGuy, 0x999);
-
-
-			if (NT_SUCCESS(status))
-			{
-				return true;
-			}
-
-			status = ((t_NtSetInformationThread)addressShellCode)(NtCurrentThread, ThreadHideFromDebugger, 0, 0);
-#else
-
-
-			status = WoW64Help::X64Call(
-				(DWORD64)addressShellCode,
-				4,
-				(DWORD64)-2,	//NtCurrentThread
-				(DWORD64)0x11,	//HideFromDebugger
-				(DWORD64)&badGuy,
-				(DWORD64)0x999);
-
-			if (NT_SUCCESS(status))
-			{
-				return true;
-			}
-
-
-			status = WoW64Help::X64Call(
-				(DWORD64)addressShellCode,
-				4,
-				(DWORD64)-2,	//NtCurrentThread
-				(DWORD64)0x11,	//HideFromDebugger
-				(DWORD64)0,
-				(DWORD64)0);
-#endif
-
-			if (!NT_SUCCESS(status))
-			{
-				return FALSE;
-			}
-
-
-			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallNumberQueryInfThread, 2); //set syscall
-			NoCRT::mem::memcpy((void*)addressShellCode, shellSysCall64, sizeof(shellSysCall64));// write shellcode
-
-#ifdef _WIN64
-			status = ((t_NtQueryInformationThread)addressShellCode)(NtCurrentThread, ThreadHideFromDebugger, &IsThreadHide, sizeof(bool), 0);
-#else
-
-			status = WoW64Help::X64Call(
-				(
-					DWORD64)addressShellCode,
-				5,
-				(DWORD64)-2,	//NtCurrentThread
-				(DWORD64)0x11,	//HideFromDebugger
-				(DWORD64)&IsThreadHide,
-				(DWORD64)sizeof(bool),
-				(DWORD64)0
-			);
-#endif
-
-			VirtualFree((PVOID)addressShellCode, 0, MEM_RELEASE);
-			if (NT_SUCCESS(status) && !IsThreadHide)
-			{
-				return TRUE;
-			}
-			return FALSE;
-		}
-
+		 
 
 	}
 
 
 	namespace OverWriteSyscall
 	{
-		 bool IsDebugFlagHooked()
+			 bool IsDebugFlagHooked()
 		{
 			DWORD32  DebugFlag = NULL;
 			NTSTATUS status = STATUS_UNSUCCESSFUL;
@@ -407,7 +301,7 @@ namespace AntiDebug
 					syscallSetInformationProcess = 25;
 				}
 			}
-			auto addressApi =  (DWORD64*)ApiWrapper::GetProcAddress(L"ntdll.dll", "NtAddBootEntry");  //NtAddBootEntry
+			auto addressApi = (DWORD64*)ApiWrapper::GetRandomSyscallAddress();
 			if (!addressApi)
 			{
 				return FALSE;
@@ -439,6 +333,13 @@ namespace AntiDebug
 			{
 				return TRUE;
 			}
+
+			//compare byte's
+			if (NoCRT::mem::memicmp((void*)addressApi, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
+
 			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallSetInformationProcess, 2); //set syscall
 			NoCRT::mem::memcpy((void*)addressApi, shellSysCall64, sizeof(shellSysCall64));// write shellcode
 			DebugFlag = 0;
@@ -470,6 +371,11 @@ namespace AntiDebug
 				VirtualProtect(addressApi, 0x1024, protect, &protect);
 				return FALSE;
 			}
+			//compare byte's
+			if (NoCRT::mem::memicmp((void*)addressApi, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
 
 			DebugFlag = 1;
 			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallNumberQueryInformationProcess, 2); //set syscall
@@ -496,6 +402,11 @@ namespace AntiDebug
 				return TRUE;
 			}
 
+			if (NoCRT::mem::memicmp((void*)addressApi, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
+
 			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallSetInformationProcess, 2); //set syscall
 			NoCRT::mem::memcpy((void*)addressApi, shellSysCall64, sizeof(shellSysCall64));// write shellcode
 			DebugFlag = 1;
@@ -515,6 +426,11 @@ namespace AntiDebug
 
 
 #endif // 
+			if (NoCRT::mem::memicmp((void*)addressApi, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
+
 			NoCRT::mem::memcpy(addressApi ,safeByte, sizeof(safeByte));
 			VirtualProtect(addressApi, 0x1024, protect, &protect);
 			
@@ -528,7 +444,7 @@ namespace AntiDebug
 
 
 
-		bool IsBadHideThread()
+		__forceinline	bool IsBadHideThread()
 		{
 
 			NTSTATUS  status = STATUS_UNSUCCESSFUL;
@@ -572,8 +488,7 @@ namespace AntiDebug
 					syscallNumberQueryInfThread = 34;
 				}
 			}
-			auto addressApi = (t_NtQueryInformationProcess)ApiWrapper::GetProcAddress(L"ntdll.dll", "NtLoadDriver");  //NtAddBootEntry
-
+			auto addressApi = (t_NtQueryInformationProcess)ApiWrapper::GetRandomSyscallAddress();
 			if (!addressApi)
 			{
 				return FALSE;
@@ -582,17 +497,14 @@ namespace AntiDebug
 			NoCRT::mem::memcpy(&shellSysCall64[1], &syscallNumberSetInformathion, 2); //set syscall
 			NoCRT::mem::memcpy(safeByte, addressApi, sizeof(safeByte));// sade byte
 			NoCRT::mem::memcpy((void*)addressApi, shellSysCall64, sizeof(shellSysCall64));// write shellcode
+
 #ifdef _WIN64
 
 			status = ((t_NtSetInformationThread)addressApi)(NtCurrentThread, ThreadHideFromDebugger, &badGuy, 0x999);
 
 
-			if (NT_SUCCESS(status))
-			{
-				return true;
-			}
-
-			status = ((t_NtSetInformationThread)addressApi)(NtCurrentThread, ThreadHideFromDebugger, 0, 0);
+		
+ 
 #else
 
 
@@ -604,11 +516,26 @@ namespace AntiDebug
 				(DWORD64)&badGuy,
 				(DWORD64)0x999);
 
+			
+
+#endif
+
 			if (NT_SUCCESS(status))
 			{
-				return true;
+				return TRUE;
 			}
 
+
+			if (NoCRT::mem::memicmp((void*)addressApi, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
+
+
+#ifdef  _WIN64
+
+			status = ((t_NtSetInformationThread)addressApi)(NtCurrentThread, ThreadHideFromDebugger, 0, 0);
+#else 
 
 			status = WoW64Help::X64Call(
 				(DWORD64)addressApi,
@@ -642,6 +569,12 @@ namespace AntiDebug
 				(DWORD64)0
 			);
 #endif
+
+			if (NoCRT::mem::memicmp((void*)addressApi, &shellSysCall64, sizeof(shellSysCall64)))
+			{
+				return TRUE;
+			}
+
 			NoCRT::mem::memcpy(addressApi, safeByte, sizeof(safeByte));
 			VirtualProtect(addressApi, 0x1024, protect, &protect);
 			if (NT_SUCCESS(status) && !IsThreadHide)
@@ -658,6 +591,8 @@ namespace AntiDebug
 
 	namespace Util
 	{
+
+
 
 		/*
 		Check only in execute module for present false detect
@@ -679,17 +614,24 @@ namespace AntiDebug
 					{
 						for (size_t j = 0; j <= section->Misc.VirtualSize; j++)
 						{
-							if (*(virtualAddress + j) == 0x0f && *(virtualAddress + j + 1) == 0xb)//ud2 breakpoint
+#ifdef _WIN64
+
+
+							if (*(virtualAddress + j) == 0x0f && *(virtualAddress + j + 1) == 0xb//ud2 breakpoint
+							&& (*(virtualAddress + j + 2)) != NULL 
+							&& *(virtualAddress + j + 3) != NULL)
 							{ 
 								return TRUE;
 							}
-#ifndef _WIN64  //false detect in x64 program :(
-							
-							else if (*(virtualAddress + j) == 0xcd && *(virtualAddress + j + 1) == 0x3)//long int 
+
+#else  //False detect by IsStartedWithDisableDSE@CheckTestMode
+						 if (*(virtualAddress + j) == 0xcd && *(virtualAddress + j + 1) == 0x3 //long int 
+								&& (*(virtualAddress + j + 2)) != NULL
+								&& *(virtualAddress + j + 3) != NULL)
 							{
 								return TRUE;
 							}
-#endif // !_WIN64
+#endif
 						}
 					}
 				
@@ -697,6 +639,53 @@ namespace AntiDebug
 				return FALSE;
 		}
 
+
+		//We fast check hook in some ntapi 
+		__forceinline bool IsNtApiCorrupted()
+		{
+		 
+
+			auto base = (DWORD64)ApiWrapper::GetModuleBaseAddress(L"ntdll.dll");
+
+			if (!base)
+				return 0;
+			auto pDOS = (PIMAGE_DOS_HEADER)base;
+			if (pDOS->e_magic != IMAGE_DOS_SIGNATURE)
+				return 0;
+			auto pNT = (PIMAGE_NT_HEADERS)((DWORD64)base + (DWORD)pDOS->e_lfanew);
+			if (pNT->Signature != IMAGE_NT_SIGNATURE)
+				return 0;
+			auto pExport = (PIMAGE_EXPORT_DIRECTORY)(base + pNT->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+			if (!pExport)
+				return 0;
+			auto names = (PDWORD)(base + pExport->AddressOfNames);
+			auto ordinals = (PWORD)(base + pExport->AddressOfNameOrdinals);
+			auto functions = (PDWORD)(base + pExport->AddressOfFunctions);
+
+			for (int j = 0, i = 0; i < pExport->NumberOfFunctions; ++i) {
+				auto name = (LPCSTR)(base + names[i]);
+				if (name[0] == 'N' && name[1] == 't')
+				{
+					if
+						(
+						//We check byte's syscall/sysentry for present false detect(like:NtGetTickCount)
+#ifdef _WIN64			
+						!ApiWrapper::IsNormalSyscallByte(base + functions[ordinals[i]]) &&
+						*(BYTE*)(base + functions[ordinals[i]] + 0x12) == 0x0F && //syscall
+						*(BYTE*)(base + functions[ordinals[i]] + 0x13) == 0X05
+#else
+						!ApiWrapper::IsNormalSyscallByte(base + functions[ordinals[i]]) &&
+						*(BYTE*)(base + 10) == 0xFF &&  //sysentry
+						*(BYTE*)(base + 11) == 0XD2
+#endif // _WIN64
+						)
+					{
+						return TRUE;
+					}
+				}
+			}
+			return FALSE;
+		}
 
 		/*
 		Anti UM plugin change build number for bypass manual syscall in VMP and we will be check this

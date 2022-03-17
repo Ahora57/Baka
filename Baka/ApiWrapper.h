@@ -188,7 +188,65 @@ namespace ApiWrapper
         return 0;
     }
 
+    __forceinline bool IsNormalSyscallByte(DWORD64 addressApi)
+    {
+#ifdef _WIN64
 
+        return (
+            *(BYTE*)(addressApi) == 0x4C &&
+            *(BYTE*)(addressApi + 1) == 0x8B &&
+            *(BYTE*)(addressApi + 2) == 0xD1 &&
+            *(BYTE*)(addressApi + 3) == 0xB8 &&
+            *(BYTE*)(addressApi + 0x12) == 0x0F &&
+            *(BYTE*)(addressApi + 0x13) == 0X05);
+#else 
+
+        return (
+            *(BYTE*)(addressApi) == 0xB8 &&
+            *(BYTE*)(addressApi + 5) == 0xBA &&
+            *(BYTE*)(addressApi + 10) == 0xFF &&
+            *(BYTE*)(addressApi + 11) == 0XD2);
+#endif // _WIN64
+
+
+    }
+     
+    //We get randome ntapi and check for hook
+    __forceinline  DWORD64 GetRandomSyscallAddress()
+    {
+
+
+        auto base = (DWORD64)ApiWrapper::GetModuleBaseAddress(L"ntdll.dll");
+        if (!base)
+            return 0;
+        auto pDOS = (PIMAGE_DOS_HEADER)base;
+        if (pDOS->e_magic != IMAGE_DOS_SIGNATURE)
+            return 0;
+        auto pNT = (PIMAGE_NT_HEADERS)(base + (DWORD)pDOS->e_lfanew);
+        if (pNT->Signature != IMAGE_NT_SIGNATURE)
+            return 0;
+        auto pExport = (PIMAGE_EXPORT_DIRECTORY)(base + pNT->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+        if (!pExport)
+            return 0;
+        auto names = (PDWORD)(base + pExport->AddressOfNames);
+        auto ordinals = (PWORD)(base + pExport->AddressOfNameOrdinals);
+        auto functions = (PDWORD)(base + pExport->AddressOfFunctions);
+        auto randomNumber = __rdtsc() % 30 + __COUNTER__ % 30; 
+
+        for (int j = 0, i = 0; i < pExport->NumberOfFunctions; ++i)
+        {
+            if (IsNormalSyscallByte(base + functions[ordinals[i]]))
+            {
+                j++;
+                if (j == randomNumber)
+                {
+                    return base + functions[ordinals[i]];
+                }
+            }
+        }
+
+        return 0;
+    }
 
 
     __forceinline DWORD64 GetProcAddress(DWORD64 base, const char* ApiName)

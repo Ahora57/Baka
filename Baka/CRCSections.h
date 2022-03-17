@@ -42,7 +42,7 @@ namespace CRCSecthion
 	*/
 
 
-	__forceinline    bool StealsCRCSectionsInit(PVOID base)
+	__forceinline    void  StealsCRCSectionsInit(PVOID base)
 	{
 
 
@@ -104,17 +104,18 @@ namespace CRCSecthion
 			}
 		}
 
-		return TRUE;
 	}
 
 
 
-	__forceinline    bool SectionsIsCorrupt(PVOID base)
+	__forceinline    bool StealsSectionsIsCorrupt()
 	{
 		PVOID buffer = 0;
 		bool secthionIsPatched = false;
 		NTSTATUS nt_status = STATUS_UNSUCCESSFUL;
 		SECTION_CRC newCRCResult[10];
+
+		auto base = (PVOID)ApiWrapper::GetModuleBaseAddress(NULL);
 
 		auto* headers = reinterpret_cast<PIMAGE_NT_HEADERS>(static_cast<char*>(base) + static_cast<PIMAGE_DOS_HEADER>(base)->e_lfanew);
 		auto* sections = IMAGE_FIRST_SECTION(headers);
@@ -204,5 +205,50 @@ namespace CRCSecthion
 		return secthionIsPatched;
 	}
 
+	__forceinline    bool SectionsIsCorrupt()
+	{
+		auto base = (PVOID)ApiWrapper::GetModuleBaseAddress(NULL);
+		NTSTATUS nt_status = STATUS_UNSUCCESSFUL;
+		SECTION_CRC newCRCResult[10];
+		auto secthionCheckResult = NULL;
+		auto* headers = reinterpret_cast<PIMAGE_NT_HEADERS>(static_cast<char*>(base) + static_cast<PIMAGE_DOS_HEADER>(base)->e_lfanew);
+		auto* sections = IMAGE_FIRST_SECTION(headers);
+
+		for (auto i = 0; i <= headers->FileHeader.NumberOfSections; i++)
+		{
+
+			auto* section = &sections[i];
+			//Check section rules
+			if ((section->Characteristics & IMAGE_SCN_MEM_READ) && !(section->Characteristics & IMAGE_SCN_MEM_WRITE))
+			{
+
+				secthionCheckResult++;
+
+				newCRCResult[i].virtualAddress = static_cast<char*>(base) + section->VirtualAddress;
+				newCRCResult[i].virtualSize = section->Misc.VirtualSize;
+				newCRCResult[i].resultCRC = CRC::Calculate(newCRCResult[i].virtualAddress, section->Misc.VirtualSize, CRC::CRC_32());
+				newCRCResult[i].fletcherCRC = fletcher32(newCRCResult[i].virtualAddress, section->Misc.VirtualSize);
+
+				if (
+					newCRCResult[i].resultCRC != CRCSectionsResult[i].resultCRC ||
+					newCRCResult[i].virtualAddress != CRCSectionsResult[i].virtualAddress ||
+					newCRCResult[i].virtualSize != CRCSectionsResult[i].virtualSize ||
+					newCRCResult[i].fletcherCRC != CRCSectionsResult[i].fletcherCRC
+					)
+				{
+					return TRUE;
+				}
+
+			}
+
+
+		}
+		if (secthionCheckResult != headers->FileHeader.NumberOfSections - 1) //we have 1 write section
+		{
+			return TRUE;
+		}
+
+		return FALSE;
+	}
 	
 }
