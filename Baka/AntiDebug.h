@@ -675,8 +675,8 @@ namespace AntiDebug
 						*(BYTE*)(base + functions[ordinals[i]] + 0x13) == 0X05
 #else
 						!ApiWrapper::IsNormalSyscallByte(base + functions[ordinals[i]]) &&
-						*(BYTE*)(base + 10) == 0xFF &&  //sysentry
-						*(BYTE*)(base + 11) == 0XD2
+						*(BYTE*)(base + functions[ordinals[i]] + 0xA) == 0xFF &&  //sysentry
+						*(BYTE*)(base + functions[ordinals[i]] + 0xB) == 0XD2
 #endif // _WIN64
 						)
 					{
@@ -759,14 +759,14 @@ namespace AntiDebug
 			/*
 			hooked(ShyllaHide)
 
-			777C7000  | EA 52189000 2300                         | jmp far 23:901852                                       | 0023:00901852:"`QPè»ÿÿÿƒø"
+			777C7000  | EA 52189000 2300                         | jmp far 23:901852                                       | 0023:00901852:"`QPÃ¨Â»Ã¿Ã¿Ã¿ÂƒÃ¸"
 			777C7007  | 0000                                     | add byte ptr ds:[eax],al                                |
 			777C7009  | 41                                       | inc ecx                                                 |
 			777C700A  | FFA7 F8000000                            | jmp dword ptr ds:[edi+F8]                               |
 
 
 			don't hooked
-			777C7000  | EA 09707C77 3300                         | jmp far 33:777C7009                                     | 0033:777C7009:"Aÿ§ø"
+			777C7000  | EA 09707C77 3300                         | jmp far 33:777C7009                                     | 0033:777C7009:"AÃ¿Â§Ã¸"
 			777C7007  | 0000                                     | add byte ptr ds:[eax],al                                |
 			777C7009  | 41                                       | inc ecx                                                 |
 			777C700A  | FFA7 F8000000                            | jmp dword ptr ds:[edi+F8]                               |
