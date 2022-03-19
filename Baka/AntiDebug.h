@@ -258,7 +258,7 @@ namespace AntiDebug
 
 	namespace OverWriteSyscall
 	{
-			 bool IsDebugFlagHooked()
+		bool IsDebugFlagHooked()
 		{
 			DWORD32  DebugFlag = NULL;
 			NTSTATUS status = STATUS_UNSUCCESSFUL;
@@ -444,7 +444,7 @@ namespace AntiDebug
 
 
 
-		__forceinline	bool IsBadHideThread()
+			bool IsBadHideThread()
 		{
 
 			NTSTATUS  status = STATUS_UNSUCCESSFUL;
@@ -592,7 +592,57 @@ namespace AntiDebug
 	namespace Util
 	{
 
+		//wallking in all known module end check PAGE_GUARD hook (x64dbg use this for memory page)
+		__forceinline bool IsGuardHook()
+		{
 
+
+			MEMORY_BASIC_INFORMATION memory_info;
+
+
+#ifdef _WIN64
+			PEB* peb = (PEB*)__readgsqword(0x60);
+
+#else
+			PEB* peb = (PEB*)__readfsdword(0x30);
+#endif
+
+
+
+			LIST_ENTRY head = peb->Ldr->InMemoryOrderModuleList;
+
+			LIST_ENTRY curr = head;
+
+			for (auto curr = head; curr.Flink != &peb->Ldr->InMemoryOrderModuleList; curr = *curr.Flink)
+			{
+				LDR_DATA_TABLE_ENTRY* mod = (LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(curr.Flink, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+
+				if (mod->BaseDllName.Buffer)
+				{
+					auto* headers = reinterpret_cast<PIMAGE_NT_HEADERS>(static_cast<char*>(mod->DllBase) + static_cast<PIMAGE_DOS_HEADER>(mod->DllBase)->e_lfanew);
+					auto* sections = IMAGE_FIRST_SECTION(headers);
+
+					for (auto i = 0; i <= headers->FileHeader.NumberOfSections; i++)
+					{
+						auto* section = &sections[i];
+
+						auto virtualAddress = static_cast<PBYTE>(mod->DllBase) + section->VirtualAddress;
+
+						if (VirtualQuery(virtualAddress, &memory_info, sizeof(MEMORY_BASIC_INFORMATION)))
+						{
+							//know memory and  page have PAGE_GUARD protecthion
+							if (memory_info.State == MEM_COMMIT && (memory_info.Protect & PAGE_GUARD))
+								return TRUE;
+
+						}
+
+					}
+
+
+				}
+			}
+			return FALSE;
+		}
 
 		/*
 		Check only in execute module for present false detect

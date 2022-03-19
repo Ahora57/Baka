@@ -12,11 +12,10 @@ int Entry()
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN); // for fun
 
 	auto baseAddress = (PVOID)ApiWrapper::GetModuleBaseAddress(NULL);
-	 CRCSecthion::StealsCRCSectionsInit(baseAddress);
+	CRCSecthion::StealsCRCSectionsInit(baseAddress);
 
-
+	ApiWrapper::printf(L"Is known page have guard hook ->\t%x\n", AntiDebug::Util::IsGuardHook());
 	ApiWrapper::printf(L"Some ntapi hooked ->\t%x\n", AntiDebug::Util::IsNtApiCorrupted());
-
 	ApiWrapper::printf(L"execute module have bp ->\t%x\n", AntiDebug::Util::IsModuleHaveBP());
 
 

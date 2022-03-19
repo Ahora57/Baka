@@ -1,7 +1,6 @@
 #pragma once
 #include "NoCRT.h"
 
-
 namespace ApiWrapper
 {
     __forceinline    UNICODE_STRING InitUnicodeString(static const wchar_t* string_to_init)
@@ -212,11 +211,11 @@ namespace ApiWrapper
     }
      
     //We get randome ntapi and check for hook
-    __forceinline  DWORD64 GetRandomSyscallAddress()
+    __forceinline    DWORD64 GetRandomSyscallAddress()
     {
 
 
-        auto base = (DWORD64)ApiWrapper::GetModuleBaseAddress(L"ntdll.dll");
+        auto base = ApiWrapper::GetModuleBaseAddress(L"ntdll.dll");
         if (!base)
             return 0;
         auto pDOS = (PIMAGE_DOS_HEADER)base;
@@ -231,7 +230,7 @@ namespace ApiWrapper
         auto names = (PDWORD)(base + pExport->AddressOfNames);
         auto ordinals = (PWORD)(base + pExport->AddressOfNameOrdinals);
         auto functions = (PDWORD)(base + pExport->AddressOfFunctions);
-        auto randomNumber = __rdtsc() % 30 + __COUNTER__ % 30; 
+        auto randomNumber = GetTickCount() % 30; 
 
         for (int j = 0, i = 0; i < pExport->NumberOfFunctions; ++i)
         {
