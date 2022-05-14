@@ -754,10 +754,7 @@ namespace AntiDebug
 					return TRUE;
 				}
 				else if 
-				(
-					ApiWrapper::GetNumberBuild() - buildNumberNtdll > 2000 ||
-					buildNumberNtdll - ApiWrapper::GetNumberBuild() < 2000
-				)
+				(ApiWrapper::GetNumberBuild() - buildNumberNtdll > 2000 )
 				{
 					return TRUE;
 				}
@@ -781,8 +778,7 @@ namespace AntiDebug
 						  return TRUE;
 					}
 					else if
-						((lpVersionInformation.dwBuildNumber - buildNumberNtdll > 2000) ||
-							(buildNumberNtdll - lpVersionInformation.dwBuildNumber < 2000))
+						((lpVersionInformation.dwBuildNumber - buildNumberNtdll > 2000) 
 					{
 						return TRUE;
 					}
